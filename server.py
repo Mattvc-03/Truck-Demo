@@ -126,6 +126,7 @@ def handle_run_packing_algorithm(data):
     script_path = os.path.join(app.root_path, 'packing-algo', 'packing.py')
 
     try:
+        print(f"Executing command: {[python_executable, script_path, str(current_width), str(current_height), str(current_length)]}")
         result = subprocess.run(
             [python_executable, script_path, str(current_width), str(current_height), str(current_length)], 
             check=True, 
@@ -133,10 +134,13 @@ def handle_run_packing_algorithm(data):
             text=True
         )
         print("Packing algorithm output:", result.stdout)
+        if result.stderr:
+            print("Packing algorithm error:", result.stderr)
     except subprocess.CalledProcessError as e:
         print("Error running packing.py:", e.stderr)
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+
 
 
 current_width = 1200
@@ -152,9 +156,7 @@ def handle_update_container_dimensions(data):
     print(f"Updated container dimensions received: {current_width}x{current_height}x{current_length}")
 
 if __name__ == '__main__':
-    import eventlet
-    import eventlet.wsgi
-    print("Starting server on http://0.0.0.0:5000")
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 5000)), app)
+    socketio.run(app, host='0.0.0.0', port=5000)
+
 
 
