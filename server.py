@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 import math
-import time
+# import sio
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -110,7 +110,8 @@ def handle_remaining_volume(volume_data):
 @socketio.on('run_packing_algorithm')
 def handle_run_packing_algorithm(data):
     print("Received 'run_packing_algorithm' event")
-    
+    emit('log_message', {'message': 'In the handle run function'})
+
     global current_width, current_height, current_length
     
     current_width = data.get('width', current_width)
@@ -118,7 +119,8 @@ def handle_run_packing_algorithm(data):
     current_length = data.get('length', current_length)
     
     print(f"Running packing algorithm with dimensions: {current_width}x{current_height}x{current_length}")
-    
+    emit('log_message', {'message': 'Algorithm will now run'})
+
     emit('algorithm_started', {'status': 'Algorithm started running'}, broadcast=True)
     
     python_executable = sys.executable
@@ -135,15 +137,15 @@ def handle_run_packing_algorithm(data):
         print("Packing algorithm output:", result.stdout)
         if result.stderr:
             print("Packing algorithm error:", result.stderr)
+        
         # Send output to the front end
-        emit('packing_algorithm_result', {'output': result.stdout, 'error': result.stderr})
+        emit('packing_algorithm_result', {'output': result.stdout, 'error': result.stderr}, broadcast=True)
     except subprocess.CalledProcessError as e:
         print("Error running packing.py:", e.stderr)
-        emit('packing_algorithm_result', {'output': '', 'error': e.stderr})
+        emit('packing_algorithm_result', {'output': '', 'error': e.stderr}, broadcast=True)
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        emit('packing_algorithm_result', {'output': '', 'error': str(e)})
-
+        emit('packing_algorithm_result', {'output': '', 'error': str(e)}, broadcast=True)
 
 @socketio.on('test_subprocess')
 def handle_test_subprocess():

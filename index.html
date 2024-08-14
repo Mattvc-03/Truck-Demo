@@ -135,15 +135,15 @@
         instructions.addEventListener('click', () => controls.lock());
 
         document.getElementById('runPackingButton').addEventListener('click', function() {
-    console.log("Button clicked, emitting 'run_packing_algorithm' event");
+          console.log("Button clicked, emitting 'run_packing_algorithm' event");
 
-    // Use the updated dimensions for the algorithm
-    socket.emit('run_packing_algorithm', {
-        width: updatedWidth,
-        height: updatedHeight,
-        length: updatedLength
-    });
-});
+          // Use the updated dimensions for the algorithm
+          socket.emit('run_packing_algorithm', {
+              width: updatedWidth,
+              height: updatedHeight,
+              length: updatedLength
+          });
+        });
 document.getElementById('testSubprocessButton').addEventListener('click', function() {
     console.log("Test Subprocess button clicked, emitting 'test_subprocess' event");
 
@@ -165,6 +165,9 @@ socket.on('packing_algorithm_result', function(data) {
     } else {
         console.log("Output from packing algorithm:", data.output);
     }
+});
+socket.on('log_message', function(data) {
+    console.log('Python Log:', data.message);
 });
 
 
