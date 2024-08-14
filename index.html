@@ -83,7 +83,15 @@
       let updatedHeight = 1380;
       let updatedLength = 2800;
 
-      const socket = io();
+      const socket = io({
+          transports: ['websocket'],
+          secure: window.location.protocol === 'https:',
+          hostname: window.location.hostname,
+          port: window.location.port || (window.location.protocol === 'https:' ? 443 : 5000),
+          path: '/socket.io'
+      });
+
+   
       const scale = 0.1;
       let generations = [];
       let moveForward = false,

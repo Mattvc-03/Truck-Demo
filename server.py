@@ -10,7 +10,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Store the container and boxes data in memory
 data = {
-    "containers": [],  # Now handles multiple containers
+    "containers": [],
     "generations": []
 }
 
@@ -113,10 +113,16 @@ def handle_run_packing_algorithm(data):
     
     global current_width, current_height, current_length
     
+    current_width = data.get('width', current_width)
+    current_height = data.get('height', current_height)
+    current_length = data.get('length', current_length)
+    
     print(f"Running packing algorithm with dimensions: {current_width}x{current_height}x{current_length}")
     
-    python_executable = sys.executable  # This will get the current Python interpreter path
+    # Emit an event to notify that the algorithm has started
+    emit('algorithm_started', {'status': 'Algorithm started running'}, broadcast=True)
     
+    python_executable = sys.executable  # This will get the current Python interpreter path
     script_path = os.path.join(app.root_path, 'packing-algo', 'packing.py')
 
     try:
@@ -132,6 +138,7 @@ def handle_run_packing_algorithm(data):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
+
 current_width = 1200
 current_height = 1380
 current_length = 2800
@@ -145,4 +152,9 @@ def handle_update_container_dimensions(data):
     print(f"Updated container dimensions received: {current_width}x{current_height}x{current_length}")
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    import eventlet
+    import eventlet.wsgi
+    print("Starting server on http://0.0.0.0:5000")
+    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 5000)), app)
+
+
