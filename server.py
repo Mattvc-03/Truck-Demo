@@ -169,6 +169,27 @@ def handle_test_subprocess():
         print(f"An unexpected error occurred: {e}")
         emit('test_subprocess_result', {'output': '', 'error': str(e)})
 
+from flask import jsonify
+import subprocess
+import sys
+
+@app.route('/run_packing_algorithm_test')
+def run_packing_algorithm_test():
+    try:
+        # Directly call the packing.py script with subprocess
+        python_executable = sys.executable
+        script_path = os.path.join(app.root_path, 'packing-algo', 'packing.py')
+        result = subprocess.run(
+            [python_executable, script_path, "1200", "1380", "2800"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        return jsonify({"status": "success", "output": result.stdout})
+    except subprocess.CalledProcessError as e:
+        return jsonify({"status": "error", "error": e.stderr})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)})
 
 
 current_width = 1200
