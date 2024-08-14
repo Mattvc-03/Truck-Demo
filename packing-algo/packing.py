@@ -1,46 +1,8 @@
 import pandas as pd
 import random
-import socketio
 from itertools import permutations
 import numpy as np
-
-
-import requests
-
-url = 'https://truck-demo.onrender.com'
-max_retries = 5
-retry_delay = 5  # seconds
-
-sio = socketio.Client()
-
-# Step 1: Test a simple HTTP connection
-try:
-    response = requests.get(url, timeout=30)  # Increase timeout to 30 seconds
-    if sio.connected:
-        sio.emit('packing_algorithm_result', {'output': f"HTTP GET request to {url} successful: {response.status_code}", 'error': ''})
-except requests.exceptions.RequestException as e:
-    if sio.connected:
-        sio.emit('packing_algorithm_result', {'output': '', 'error': f"HTTP GET request to {url} failed: {e}"})
-    else:
-        print(f"HTTP GET request failed but unable to emit: {e}")
-
-# Step 2: Try connecting via Socket.IO
-for attempt in range(max_retries):
-    try:
-        print(f"Attempt {attempt + 1} to connect to {url}")
-        sio.connect(url, wait_timeout=30)  # Increase the wait timeout to 30 seconds
-        print("Connection successful")
-        break
-    except socketio.exceptions.ConnectionError as e:
-        error_message = f"Connection failed on attempt {attempt + 1}: {e}"
-        print(error_message)
-        if attempt < max_retries - 1:
-            print(f"Retrying in {retry_delay} seconds...")
-            time.sleep(retry_delay)
-        else:
-            print("Max retries reached. Connection failed.")
-
-
+import time
 
 class Box:
     def __init__(self, box_id, width, height, length, weight):
@@ -267,7 +229,7 @@ def optimize_packing(container):
         container.split_space(x, y, z, box)
     container.total_remaining_volume = sum(s[3] * s[4] * s[5] for s in container.remaining_space)
 
-def genetic_algorithm(csv_file, container_dimensions, sio, pop_size=150, num_generations=300, mutation_rate=0.01):
+def genetic_algorithm(csv_file, container_dimensions, pop_size=150, num_generations=300, mutation_rate=0.01):
     boxes_data = [
         {'id': 1, 'width': 450, 'depth': 350, 'height': 480, 'weight': 100},
         {'id': 2, 'width': 450, 'depth': 350, 'height': 480, 'weight': 100},
@@ -339,8 +301,6 @@ def genetic_algorithm(csv_file, container_dimensions, sio, pop_size=150, num_gen
         current_best_container = containers[current_best_index]
         current_unplaced_boxes = unplaced_boxes_list[current_best_index]
 
-        emit_local_solution(sio, current_best_container, generation, current_best_fitness)
-
         update_best_solution(current_best_individual, current_best_container, current_best_fitness)
 
         parents = select_parents(population, fitness, pop_size // 2)
@@ -365,8 +325,6 @@ def genetic_algorithm(csv_file, container_dimensions, sio, pop_size=150, num_gen
             break
 
     # Emit the best global solution at the end
-    emit_solution(sio, best_container, num_generations, best_fitness)
-
     print(f"Best Fitness = {best_fitness}")
     if best_container:
         unplaced_boxes = current_unplaced_boxes[:]  # Create a copy of unplaced boxes
@@ -385,7 +343,6 @@ def genetic_algorithm(csv_file, container_dimensions, sio, pop_size=150, num_gen
             new_fitness, _, _ = evaluate_fitness(best_individual, container_dimensions)
             best_fitness = new_fitness
             print(f"Updated Best Fitness = {best_fitness}")
-            emit_solution(sio, best_container, num_generations, best_fitness)
 
         if unplaced_boxes:
             print("Final Unplaced Boxes:")
@@ -396,96 +353,15 @@ def genetic_algorithm(csv_file, container_dimensions, sio, pop_size=150, num_gen
 
     return best_individual, best_container
 
-def emit_solution(sio, container, generation, fitness):
-    generation_data = {
-        "generation": generation,
-        "fitness": float(fitness),
-        "containers": [
-            {
-                "width": container.width,
-                "height": container.height,
-                "length": container.length,
-                "boxes": [
-                    {
-                        "id": box.id,
-                        "width": int(box.width),
-                        "height": int(box.height),
-                        "length": int(box.length),
-                        "x": int(x),
-                        "y": int(y),
-                        "z": int(z),
-                        "weight": int(box.weight),
-                    }
-                    for box, x, y, z in container.boxes
-                ],
-                "total_remaining_volume": float(container.total_remaining_volume)
-            }
-        ]
-    }
-    sio.emit('update_generation', generation_data)
-
-def emit_local_solution(sio, container, generation, fitness):
-    generation_data = {
-        "generation": generation,
-        "fitness": float(fitness),
-        "containers": [
-            {
-                "width": container.width,
-                "height": container.height,
-                "length": container.length,
-                "boxes": [
-                    {
-                        "id": box.id,
-                        "width": int(box.width),
-                        "height": int(box.height),
-                        "length": int(box.length),
-                        "x": int(x),
-                        "y": int(y),
-                        "z": int(z),
-                        "weight": int(box.weight),
-                    }
-                    for box, x, y, z in container.boxes
-                ],
-                "total_remaining_volume": float(container.total_remaining_volume)
-            }
-        ]
-    }
-    sio.emit('update_generation', generation_data)
-
-import sys
-import os
-
 def main():
     # Retrieve the dimensions from command-line arguments
     container_width = int(sys.argv[1])
     container_height = int(sys.argv[2])
     container_length = int(sys.argv[3])
 
-    # Initialize SocketIO client
-    sio = socketio.Client()
-
-    @sio.event
-    def connect():
-        print('Connected to server')
-
-    @sio.on('update_data')
-    def on_update_data(data):
-        pass
-
-    # Connect to the deployed server URL
-    url = 'https://truck-demo.onrender.com'
-    print(f"Connecting to {url}")
-    try:
-        sio.connect(url, wait_timeout=100)  # Increase the timeout if necessary
-    except socketio.exceptions.ConnectionError as e:
-        print(f"Connection to server failed: {e}")
-        return
-
-    sio.emit('get_data')
-
     # Use the received dimensions in the algorithm
     container_dimensions = (container_width, container_height, container_length)
-    best_individual, best_container = genetic_algorithm('products.csv', container_dimensions, sio)
+    best_individual, best_container = genetic_algorithm('products.csv', container_dimensions)
 
     print(f"Final Best Container:")
     if best_container:
