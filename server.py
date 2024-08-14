@@ -170,4 +170,5 @@ def handle_update_container_dimensions(data):
 
 if __name__ == '__main__':
     print("Starting server on http://0.0.0.0:5000")
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 5000)), app, timeout=120)  # Set the timeout here
+    # No timeout parameter here
+    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 5000)), app)
