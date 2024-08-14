@@ -200,41 +200,42 @@
         scene.add(gridHelper);
 
         const loader = new THREE.GLTFLoader();
-        loader.load(
-          'templates/truck/finalTruck.glb',
-          function (gltf) {
-            truck = gltf.scene;
-            scene.add(truck);
-            truck.scale.set(20, 20, 20);
+loader.load(
+  '/truck/finalTruck.glb', // Updated path
+  function (gltf) {
+    truck = gltf.scene;
+    scene.add(truck);
+    truck.scale.set(20, 20, 20);
 
-            trailer = truck.getObjectByName('Trailer');
-            wheels = truck.getObjectByName('Wheels');
+    trailer = truck.getObjectByName('Trailer');
+    wheels = truck.getObjectByName('Wheels');
 
-            if (trailer) {
-              trailer.scale.set(3, 3, 3);
-              document.getElementById('trailer-width').value = trailer.scale.x * 20;
-              document.getElementById('trailer-height').value = trailer.scale.z * 20;
-              document.getElementById('trailer-length').value = trailer.scale.y * 20;
-            }
+    if (trailer) {
+      trailer.scale.set(3, 3, 3);
+      document.getElementById('trailer-width').value = trailer.scale.x * 20;
+      document.getElementById('trailer-height').value = trailer.scale.z * 20;
+      document.getElementById('trailer-length').value = trailer.scale.y * 20;
+    }
 
-            truck.traverse(function (child) {
-              if (child.isMesh) {
-                const basicMaterial = new THREE.MeshBasicMaterial({
-                  color: child.material.color || new THREE.Color(0xff0000)
-                });
+    truck.traverse(function (child) {
+      if (child.isMesh) {
+        const basicMaterial = new THREE.MeshBasicMaterial({
+          color: child.material.color || new THREE.Color(0xff0000)
+        });
 
-                child.material = basicMaterial;
-                child.material.needsUpdate = true;
-              }
-            });
+        child.material = basicMaterial;
+        child.material.needsUpdate = true;
+      }
+    });
 
-            displayFullSolution();
-          },
-          undefined,
-          function (error) {
-            console.error('An error occurred while loading the truck model:', error);
-          }
-        );
+    displayFullSolution();
+  },
+  undefined,
+  function (error) {
+    console.error('An error occurred while loading the truck model:', error);
+  }
+);
+
 
         document.getElementById('update-trailer').addEventListener('click', updateTrailerSize);
       }
