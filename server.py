@@ -107,39 +107,43 @@ def handle_remaining_volume(volume_data):
             break
     emit('update_data', data, room='main_room', broadcast=True)
 
-    @socketio.on('run_packing_algorithm')
-    def handle_run_packing_algorithm(data):
-        print("Received 'run_packing_algorithm' event")
-        
-        global current_width, current_height, current_length
-        
-        current_width = data.get('width', current_width)
-        current_height = data.get('height', current_height)
-        current_length = data.get('length', current_length)
-        
-        print(f"Running packing algorithm with dimensions: {current_width}x{current_height}x{current_length}")
-        
-        # Emit an event to notify that the algorithm has started
-        emit('algorithm_started', {'status': 'Algorithm started running'}, broadcast=True)
-        
-        python_executable = sys.executable  # This will get the current Python interpreter path
-        script_path = os.path.join(app.root_path, 'packing-algo', 'packing.py')
+@socketio.on('run_packing_algorithm')
+def handle_run_packing_algorithm(data):
+    print("Received 'run_packing_algorithm' event")
+    
+    global current_width, current_height, current_length
+    
+    current_width = data.get('width', current_width)
+    current_height = data.get('height', current_height)
+    current_length = data.get('length', current_length)
+    
+    print(f"Running packing algorithm with dimensions: {current_width}x{current_height}x{current_length}")
+    
+    emit('algorithm_started', {'status': 'Algorithm started running'}, broadcast=True)
+    
+    python_executable = sys.executable
+    script_path = os.path.join(app.root_path, 'packing-algo', 'packing.py')
 
-        try:
-            print(f"Executing command: {[python_executable, script_path, str(current_width), str(current_height), str(current_length)]}")
-            result = subprocess.run(
-                [python_executable, script_path, str(current_width), str(current_height), str(current_length)], 
-                check=True, 
-                capture_output=True, 
-                text=True
-            )
-            print("Packing algorithm output:", result.stdout)
-            if result.stderr:
-                print("Packing algorithm error:", result.stderr)
-        except subprocess.CalledProcessError as e:
-            print("Error running packing.py:", e.stderr)
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+    try:
+        print(f"Executing command: {[python_executable, script_path, str(current_width), str(current_height), str(current_length)]}")
+        result = subprocess.run(
+            [python_executable, script_path, str(current_width), str(current_height), str(current_length)], 
+            check=True, 
+            capture_output=True, 
+            text=True
+        )
+        print("Packing algorithm output:", result.stdout)
+        if result.stderr:
+            print("Packing algorithm error:", result.stderr)
+        # Send output to the front end
+        emit('packing_algorithm_result', {'output': result.stdout, 'error': result.stderr})
+    except subprocess.CalledProcessError as e:
+        print("Error running packing.py:", e.stderr)
+        emit('packing_algorithm_result', {'output': '', 'error': e.stderr})
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        emit('packing_algorithm_result', {'output': '', 'error': str(e)})
+
 
 @socketio.on('test_subprocess')
 def handle_test_subprocess():
