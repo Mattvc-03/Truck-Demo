@@ -90,7 +90,8 @@
           secure: true,               // Ensure SSL is used
           hostname: window.location.hostname,
           port: window.location.port || (window.location.protocol === 'https:' ? 443 : 80),
-          path: '/socket.io'
+          path: '/socket.io',
+          timeout: 120000
       });
 
    

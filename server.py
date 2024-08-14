@@ -4,9 +4,11 @@ import os
 import subprocess
 import sys
 import math
-# import sio
+import eventlet
+import eventlet.wsgi
+
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=120, ping_interval=30)
 
 # Store the container and boxes data in memory
 data = {
@@ -107,7 +109,6 @@ def handle_remaining_volume(volume_data):
             break
     emit('update_data', data, room='main_room', broadcast=True)
 
-
 @socketio.on('run_packing_algorithm')
 def handle_run_packing_algorithm(data):
     print("Received 'run_packing_algorithm' event")
@@ -131,7 +132,8 @@ def handle_run_packing_algorithm(data):
                 [sys.executable, 'packing-algo/packing.py', str(width), str(height), str(length)],
                 check=True,
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=120  # Increase the timeout here
             )
 
             # Output results
@@ -145,15 +147,14 @@ def handle_run_packing_algorithm(data):
         except subprocess.CalledProcessError as e:
             print("Error running packing.py:", e.stderr)
             emit('packing_algorithm_result', {'output': '', 'error': e.stderr})
+        except subprocess.TimeoutExpired as e:
+            print("Packing algorithm timed out:", e.stderr)
+            emit('packing_algorithm_result', {'output': '', 'error': 'Packing algorithm timed out'})
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             emit('packing_algorithm_result', {'output': '', 'error': str(e)})
     else:
         emit('packing_algorithm_result', {'output': '', 'error': 'Invalid dimensions provided'})
-
-
-
-
 
 current_width = 1200
 current_height = 1380
@@ -168,10 +169,5 @@ def handle_update_container_dimensions(data):
     print(f"Updated container dimensions received: {current_width}x{current_height}x{current_length}")
 
 if __name__ == '__main__':
-    import eventlet
-    import eventlet.wsgi
     print("Starting server on http://0.0.0.0:5000")
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 5000)), app)
-
-
-
+    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 5000)), app, timeout=120)  # Set the timeout here
