@@ -3,9 +3,7 @@ import random
 import socketio
 from itertools import permutations
 import numpy as np
-import sys
 
-# Define the Box class
 class Box:
     def __init__(self, box_id, width, height, length, weight):
         self.id = box_id
@@ -19,7 +17,6 @@ class Box:
     def rotate(self, new_width, new_height, new_length):
         return Box(self.id, new_width, new_height, new_length, self.weight)
 
-# Define the Container class
 class Container:
     def __init__(self, width, height, length):
         self.width = width
@@ -35,7 +32,7 @@ class Container:
         return box.width <= w and box.height <= h and box.length <= l
     
     def add_box(self, box):
-        for space in sorted(self.remaining_space, key=lambda s: (s[2],s[1])):
+        for space in sorted(self.remaining_space, key=lambda s: (s[2], s[1])):
             for orientation in self.generate_orientations(box):
                 if self.can_fit(orientation, space):
                     x, y, z, w, h, l = space
@@ -203,9 +200,10 @@ def mutate(individual, mutation_rate):
         if random.random() < mutation_rate:
             j = random.randint(0, len(individual) - 1)
             individual[i], individual[j] = individual[j], individual[i]
+
 def optimize_packing(container):
     moved = True
-    while moved:   
+    while moved:
         moved = False
         for i, (box, x, y, z) in enumerate(container.boxes):
             # Move the box back in the z-direction
@@ -224,13 +222,13 @@ def optimize_packing(container):
             if new_y != y:
                 container.boxes[i] = (box, x, new_y, z)
                 moved = True
-       
 
     # Update the remaining space
     container.remaining_space = []
     for box, x, y, z in container.boxes:
         container.split_space(x, y, z, box)
     container.total_remaining_volume = sum(s[3] * s[4] * s[5] for s in container.remaining_space)
+
 def genetic_algorithm(csv_file, container_dimensions, sio, pop_size=150, num_generations=300, mutation_rate=0.01):
     boxes_data = [
         {'id': 1, 'width': 450, 'depth': 350, 'height': 480, 'weight': 100},
@@ -416,6 +414,9 @@ def emit_local_solution(sio, container, generation, fitness):
     }
     sio.emit('update_generation', generation_data)
 
+import sys
+import os
+
 def main():
     # Retrieve the dimensions from command-line arguments
     container_width = int(sys.argv[1])
@@ -429,33 +430,29 @@ def main():
     def connect():
         print('Connected to server')
 
-    @sio.event
-    def disconnect():
-        print('Disconnected from server')
-
     @sio.on('update_data')
     def on_update_data(data):
-        print('Received update_data:', data)
+        pass
 
+    # Connect to the deployed server URL
+    url = 'https://truck-demo.onrender.com'
+    print(f"Connecting to {url}")
     try:
-        # Connect to the deployed server
-        sio.connect('https://truck-demo.onrender.com', wait_timeout=30)
-        sio.emit('get_data')
-
-        # Run the genetic algorithm
-        container_dimensions = (container_width, container_height, container_length)
-        best_individual, best_container = genetic_algorithm('products.csv', container_dimensions, sio)
-
-        print(f"Final Best Container:")
-        if best_container:
-            for box, x, y, z in best_container.boxes:
-                print(f"  Box {box.id}: {box.width}x{box.height}x{box.length} at position ({x}, {y}, {z})")
-
+        sio.connect(url, wait_timeout=10)  # Increase the timeout if necessary
     except socketio.exceptions.ConnectionError as e:
         print(f"Connection to server failed: {e}")
+        return
 
-    finally:
-        sio.disconnect()
+    sio.emit('get_data')
+
+    # Use the received dimensions in the algorithm
+    container_dimensions = (container_width, container_height, container_length)
+    best_individual, best_container = genetic_algorithm('products.csv', container_dimensions, sio)
+
+    print(f"Final Best Container:")
+    if best_container:
+        for box, x, y, z in best_container.boxes:
+            print(f"  Box {box.id}: {box.width}x{box.height}x{box.length} at position ({x}, {y}, {z})")
 
 if __name__ == "__main__":
     main()
