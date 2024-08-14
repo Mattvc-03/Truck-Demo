@@ -437,7 +437,7 @@ def main():
     # Adjust URL based on environment variable or default to localhost
     url = os.getenv('SERVER_URL', 'http://localhost:5000')
     print(f"Connecting to {url}")
-    sio.connect(url)
+    sio.connect('https://truck-demo.onrender.com/')
 
     sio.emit('get_data')
 
