@@ -4,6 +4,7 @@ import socketio
 from itertools import permutations
 import numpy as np
 
+
 import requests
 
 url = 'https://truck-demo.onrender.com'
@@ -14,26 +15,31 @@ sio = socketio.Client()
 
 # Step 1: Test a simple HTTP connection
 try:
-    response = requests.get(url, timeout=10)
-    sio.emit('packing_algorithm_result', {'output': f"HTTP GET request to {url} successful: {response.status_code}", 'error': ''})
+    response = requests.get(url, timeout=30)  # Increase timeout to 30 seconds
+    if sio.connected:
+        sio.emit('packing_algorithm_result', {'output': f"HTTP GET request to {url} successful: {response.status_code}", 'error': ''})
 except requests.exceptions.RequestException as e:
-    sio.emit('packing_algorithm_result', {'output': '', 'error': f"HTTP GET request to {url} failed: {e}"})
+    if sio.connected:
+        sio.emit('packing_algorithm_result', {'output': '', 'error': f"HTTP GET request to {url} failed: {e}"})
+    else:
+        print(f"HTTP GET request failed but unable to emit: {e}")
 
 # Step 2: Try connecting via Socket.IO
 for attempt in range(max_retries):
     try:
-        sio.emit('packing_algorithm_result', {'output': f"Attempt {attempt + 1} to connect to {url}", 'error': ''})
+        print(f"Attempt {attempt + 1} to connect to {url}")
         sio.connect(url, wait_timeout=30)  # Increase the wait timeout to 30 seconds
-        sio.emit('packing_algorithm_result', {'output': "Connection successful", 'error': ''})
+        print("Connection successful")
         break
     except socketio.exceptions.ConnectionError as e:
         error_message = f"Connection failed on attempt {attempt + 1}: {e}"
-        sio.emit('packing_algorithm_result', {'output': '', 'error': error_message})
+        print(error_message)
         if attempt < max_retries - 1:
-            sio.emit('packing_algorithm_result', {'output': f"Retrying in {retry_delay} seconds...", 'error': ''})
+            print(f"Retrying in {retry_delay} seconds...")
             time.sleep(retry_delay)
         else:
-            sio.emit('packing_algorithm_result', {'output': '', 'error': "Max retries reached. Connection failed."})
+            print("Max retries reached. Connection failed.")
+
 
 
 class Box:
