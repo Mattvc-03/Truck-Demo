@@ -3,7 +3,9 @@ import random
 import socketio
 from itertools import permutations
 import numpy as np
+import sys
 
+# Define the Box class
 class Box:
     def __init__(self, box_id, width, height, length, weight):
         self.id = box_id
@@ -17,6 +19,7 @@ class Box:
     def rotate(self, new_width, new_height, new_length):
         return Box(self.id, new_width, new_height, new_length, self.weight)
 
+# Define the Container class
 class Container:
     def __init__(self, width, height, length):
         self.width = width
@@ -82,7 +85,7 @@ class Container:
         if y == 0:
             return True  # The box is on the container floor
         support_area = 0
-        required_area = 0.85 * box.width * box.length  # At least 60% of the bottom face should be supported
+        required_area = 0.85 * box.width * box.length  # At least 85% of the bottom face should be supported
 
         for other_box, ox, oy, oz in self.boxes:
             if oy + other_box.height == y:  # Check if other box is directly below
@@ -112,7 +115,7 @@ class Container:
 def initialize_population(pop_size, boxes):
     population = []
     for _ in range(pop_size):
-        individual = sorted(boxes, key=lambda b: -(b.volume)) # descending
+        individual = sorted(boxes, key=lambda b: -(b.volume))  # descending
         population.append(individual)
     return population
 
@@ -136,7 +139,6 @@ def evaluate_fitness(individual, container_dimensions):
             unplaced_boxes.append(box)
 
     container.apply_gravity()
-    # optimize_packing(container)
 
     placed_volume = container.total_volume - container.total_remaining_volume
     total_box_volume = sum(box.volume for box in individual)
@@ -162,7 +164,7 @@ def evaluate_fitness(individual, container_dimensions):
 best_fitness = float('-inf')
 best_container = None
 best_individual = None
-iteration_count = 0;
+iteration_count = 0
 
 def clone_container(container):
     new_container = Container(container.width, container.height, container.length)
@@ -172,14 +174,14 @@ def clone_container(container):
     return new_container
 
 def update_best_solution(individual, container, fitness):
-    global best_fitness, best_container, best_individual,iteration_count
+    global best_fitness, best_container, best_individual, iteration_count
     if fitness > best_fitness:
         best_fitness = fitness
         best_container = container
         best_individual = individual
         iteration_count = 0
     else:
-        iteration_count+=1
+        iteration_count += 1
 
 def select_parents(population, fitness, num_parents):
     ranks = np.argsort(np.argsort(fitness))
@@ -201,7 +203,6 @@ def mutate(individual, mutation_rate):
         if random.random() < mutation_rate:
             j = random.randint(0, len(individual) - 1)
             individual[i], individual[j] = individual[j], individual[i]
-
 def optimize_packing(container):
     moved = True
     while moved:   
@@ -230,60 +231,7 @@ def optimize_packing(container):
     for box, x, y, z in container.boxes:
         container.split_space(x, y, z, box)
     container.total_remaining_volume = sum(s[3] * s[4] * s[5] for s in container.remaining_space)
-
 def genetic_algorithm(csv_file, container_dimensions, sio, pop_size=150, num_generations=300, mutation_rate=0.01):
-    # boxes_data = [
-    #     {'id': 1, 'width': 500, 'depth': 350, 'height': 480, 'weight': 100},
-    #     {'id': 2, 'width': 200, 'depth': 350, 'height': 480, 'weight': 100},
-    #     {'id': 3, 'width': 500, 'depth': 350, 'height': 240, 'weight': 85},
-    #     {'id': 4, 'width': 500, 'depth': 250, 'height': 480, 'weight': 100},
-    #     {'id': 5, 'width': 500, 'depth': 250, 'height': 480, 'weight': 100},
-    #     {'id': 6, 'width': 500, 'depth': 250, 'height': 360, 'weight': 100},
-    #     {'id': 7, 'width': 400, 'depth': 250, 'height': 480, 'weight': 100},
-    #     {'id': 8, 'width': 400, 'depth': 250, 'height': 480, 'weight': 100},
-    #     {'id': 9, 'width': 400, 'depth': 250, 'height': 480, 'weight': 65},
-    #     {'id': 10, 'width': 400, 'depth': 125, 'height': 240, 'weight': 60},
-    #     {'id': 11, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 12, 'width': 800, 'depth': 250, 'height': 480, 'weight': 70},
-    #     {'id': 13, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 14, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 15, 'width': 400, 'depth': 250, 'height': 480, 'weight': 50},
-    #     {'id': 16, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 17, 'width': 200, 'depth': 125, 'height': 480, 'weight': 40},
-    #     {'id': 18, 'width': 400, 'depth': 250, 'height': 240, 'weight': 40},
-    #     {'id': 19, 'width': 400, 'depth': 250, 'height': 480, 'weight': 40},
-    #     {'id': 20, 'width': 300, 'depth': 250, 'height': 240, 'weight': 40},
-    #     {'id': 21, 'width': 400, 'depth': 125, 'height': 240, 'weight': 60},
-    #     {'id': 22, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 23, 'width': 800, 'depth': 250, 'height': 240, 'weight': 100},
-    #     {'id': 24, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 25, 'width': 400, 'depth': 250, 'height': 240, 'weight': 60},
-    #     {'id': 26, 'width': 400, 'depth': 250, 'height': 240, 'weight': 60},
-    #     {'id': 27, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 28, 'width': 200, 'depth': 125, 'height': 480, 'weight': 40},
-    #     {'id': 29, 'width': 400, 'depth': 250, 'height': 240, 'weight': 40},
-    #     {'id': 30, 'width': 100, 'depth': 250, 'height': 240, 'weight': 30},
-    #     {'id': 31, 'width': 300, 'depth': 250, 'height': 240, 'weight': 40},
-    #     {'id': 32, 'width': 400, 'depth': 125, 'height': 240, 'weight': 60},
-    #     {'id': 33, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 34, 'width': 800, 'depth': 250, 'height': 240, 'weight': 100},
-    #     {'id': 35, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 36, 'width': 400, 'depth': 250, 'height': 240, 'weight': 100},
-    #     {'id': 37, 'width': 400, 'depth': 250, 'height': 240, 'weight': 60},
-    #     {'id': 38, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 39, 'width': 200, 'depth': 125, 'height': 480, 'weight': 100},
-    #     {'id': 40, 'width': 400, 'depth': 250, 'height': 240, 'weight': 40},
-    #     {'id': 41, 'width': 100, 'depth': 250, 'height': 240, 'weight': 30},
-    #     {'id': 42, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 43, 'width': 400, 'depth': 250, 'height': 240, 'weight': 100},
-    #     {'id': 44, 'width': 400, 'depth': 250, 'height': 240, 'weight': 60},
-    #     {'id': 45, 'width': 400, 'depth': 250, 'height': 480, 'weight': 60},
-    #     {'id': 46, 'width': 200, 'depth': 125, 'height': 480, 'weight': 100},
-    #     {'id': 47, 'width': 400, 'depth': 250, 'height': 240, 'weight': 40},
-    #     {'id': 48, 'width': 100, 'depth': 250, 'height': 240, 'weight': 30},
-    #     {'id': 49, 'width': 400, 'depth': 250, 'height': 240, 'weight': 40},
-    #     {'id': 50, 'width': 100, 'depth': 250, 'height': 240, 'weight': 30},
-    # ]
     boxes_data = [
         {'id': 1, 'width': 450, 'depth': 350, 'height': 480, 'weight': 100},
         {'id': 2, 'width': 450, 'depth': 350, 'height': 480, 'weight': 100},
@@ -338,7 +286,6 @@ def genetic_algorithm(csv_file, container_dimensions, sio, pop_size=150, num_gen
     ]
 
     boxes = [Box(box['id'], box['width'], box['height'], box['depth'], box['weight']) for box in boxes_data]
-    # boxes.sort(key=lambda b: b.volume, reverse=True)  # Sort boxes by weight, heaviest first
 
     population = initialize_population(pop_size, boxes)
 
@@ -469,16 +416,11 @@ def emit_local_solution(sio, container, generation, fitness):
     }
     sio.emit('update_generation', generation_data)
 
-import sys
-
 def main():
     # Retrieve the dimensions from command-line arguments
     container_width = int(sys.argv[1])
     container_height = int(sys.argv[2])
     container_length = int(sys.argv[3])
-
-    # Your existing code...
- 
 
     # Initialize SocketIO client
     sio = socketio.Client()
@@ -487,24 +429,33 @@ def main():
     def connect():
         print('Connected to server')
 
+    @sio.event
+    def disconnect():
+        print('Disconnected from server')
+
     @sio.on('update_data')
     def on_update_data(data):
-        pass
+        print('Received update_data:', data)
 
-    sio.connect('http://localhost:5000')
-    sio.emit('get_data')
+    try:
+        # Connect to the deployed server
+        sio.connect('https://truck-demo.onrender.com', wait_timeout=30)
+        sio.emit('get_data')
 
-    # Use the received dimensions in the algorithm
-    container_dimensions = (container_width, container_height, container_length)
-    best_individual, best_container = genetic_algorithm('products.csv', container_dimensions, sio)
+        # Run the genetic algorithm
+        container_dimensions = (container_width, container_height, container_length)
+        best_individual, best_container = genetic_algorithm('products.csv', container_dimensions, sio)
 
-    print(f"Final Best Container:")
-    if best_container:
-        for box, x, y, z in best_container.boxes:
-            print(f"  Box {box.id}: {box.width}x{box.height}x{box.length} at position ({x}, {y}, {z})")
+        print(f"Final Best Container:")
+        if best_container:
+            for box, x, y, z in best_container.boxes:
+                print(f"  Box {box.id}: {box.width}x{box.height}x{box.length} at position ({x}, {y}, {z})")
+
+    except socketio.exceptions.ConnectionError as e:
+        print(f"Connection to server failed: {e}")
+
+    finally:
+        sio.disconnect()
 
 if __name__ == "__main__":
     main()
-
-
-
