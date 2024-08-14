@@ -4,6 +4,38 @@ import socketio
 from itertools import permutations
 import numpy as np
 
+import requests
+
+url = 'https://truck-demo.onrender.com'
+max_retries = 5
+retry_delay = 5  # seconds
+
+sio = socketio.Client()
+
+# Step 1: Test a simple HTTP connection
+try:
+    response = requests.get(url, timeout=10)
+    sio.emit('packing_algorithm_result', {'output': f"HTTP GET request to {url} successful: {response.status_code}", 'error': ''})
+except requests.exceptions.RequestException as e:
+    sio.emit('packing_algorithm_result', {'output': '', 'error': f"HTTP GET request to {url} failed: {e}"})
+
+# Step 2: Try connecting via Socket.IO
+for attempt in range(max_retries):
+    try:
+        sio.emit('packing_algorithm_result', {'output': f"Attempt {attempt + 1} to connect to {url}", 'error': ''})
+        sio.connect(url, wait_timeout=30)  # Increase the wait timeout to 30 seconds
+        sio.emit('packing_algorithm_result', {'output': "Connection successful", 'error': ''})
+        break
+    except socketio.exceptions.ConnectionError as e:
+        error_message = f"Connection failed on attempt {attempt + 1}: {e}"
+        sio.emit('packing_algorithm_result', {'output': '', 'error': error_message})
+        if attempt < max_retries - 1:
+            sio.emit('packing_algorithm_result', {'output': f"Retrying in {retry_delay} seconds...", 'error': ''})
+            time.sleep(retry_delay)
+        else:
+            sio.emit('packing_algorithm_result', {'output': '', 'error': "Max retries reached. Connection failed."})
+
+
 class Box:
     def __init__(self, box_id, width, height, length, weight):
         self.id = box_id
