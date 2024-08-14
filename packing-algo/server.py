@@ -15,11 +15,13 @@ data = {
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return send_from_directory(app.root_path, 'index.html')
+
 
 @app.route('/truck/<path:filename>')
 def truck_files(filename):
-    return send_from_directory(os.path.join(app.root_path, 'templates', 'truck'), filename)
+    return send_from_directory(os.path.join(app.root_path, 'packing-algo', 'templates', 'truck'), filename)
+
 
 @socketio.on('connect')
 def handle_connect():
