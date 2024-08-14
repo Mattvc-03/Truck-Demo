@@ -438,7 +438,7 @@ def main():
     url = 'https://truck-demo.onrender.com'
     print(f"Connecting to {url}")
     try:
-        sio.connect(url, wait_timeout=10)  # Increase the timeout if necessary
+        sio.connect(url, wait_timeout=100)  # Increase the timeout if necessary
     except socketio.exceptions.ConnectionError as e:
         print(f"Connection to server failed: {e}")
         return
