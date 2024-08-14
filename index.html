@@ -84,10 +84,10 @@
       let updatedLength = 2800;
 
       const socket = io({
-          transports: ['websocket'],
-          secure: window.location.protocol === 'https:',
+          transports: ['websocket'],  // Ensure WebSocket is the transport method
+          secure: true,               // Ensure SSL is used
           hostname: window.location.hostname,
-          port: window.location.port || (window.location.protocol === 'https:' ? 443 : 5000),
+          port: window.location.port || (window.location.protocol === 'https:' ? 443 : 80),
           path: '/socket.io'
       });
 

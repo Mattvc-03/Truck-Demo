@@ -434,10 +434,14 @@ def main():
     def on_update_data(data):
         pass
 
-    # Adjust URL based on environment variable or default to localhost
-    url = os.getenv('SERVER_URL', 'http://localhost:5000')
+    # Connect to the deployed server URL
+    url = 'https://truck-demo.onrender.com'
     print(f"Connecting to {url}")
-    sio.connect('https://truck-demo.onrender.com/')
+    try:
+        sio.connect(url, wait_timeout=10)  # Increase the timeout if necessary
+    except socketio.exceptions.ConnectionError as e:
+        print(f"Connection to server failed: {e}")
+        return
 
     sio.emit('get_data')
 
