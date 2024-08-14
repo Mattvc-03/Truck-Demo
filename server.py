@@ -107,21 +107,28 @@ def handle_remaining_volume(volume_data):
             break
     emit('update_data', data, room='main_room', broadcast=True)
 
+
 @socketio.on('run_packing_algorithm')
 def handle_run_packing_algorithm(data):
     print("Received 'run_packing_algorithm' event")
-    
-    width = data.get('width')
-    height = data.get('height')
-    length = data.get('length')
+    print("Data received:", data)  # Add this line to debug
+
+    try:
+        width = int(float(data.get('width')))
+        height = int(float(data.get('height')))
+        length = int(float(data.get('length')))
+    except (ValueError, TypeError):
+        emit('packing_algorithm_result', {'output': '', 'error': 'Invalid dimensions provided'})
+        return
 
     if width and height and length:
-        command = f"python3 packing.py {width} {height} {length}"
+        # Update the command to include the correct path to packing.py
+        command = f"python3 packing_algo/packing.py {width} {height} {length}"
         print(f"Executing command: {command}")
 
         try:
             result = subprocess.run(
-                [sys.executable, 'packing.py', str(width), str(height), str(length)],
+                [sys.executable, 'packing-algo/packing.py', str(width), str(height), str(length)],
                 check=True,
                 capture_output=True,
                 text=True
@@ -143,6 +150,9 @@ def handle_run_packing_algorithm(data):
             emit('packing_algorithm_result', {'output': '', 'error': str(e)})
     else:
         emit('packing_algorithm_result', {'output': '', 'error': 'Invalid dimensions provided'})
+
+
+
 
 
 current_width = 1200
